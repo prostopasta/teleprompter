@@ -877,7 +877,7 @@
         frameRate: { ideal: 30 }
       };
 
-      if (chkBlur && chkBlur.checked) {
+      if (blurSlider && parseInt(blurSlider.value, 10) > 0) {
         videoConstraints.backgroundBlur = true;
       }
 
@@ -898,15 +898,13 @@
         setupAudioVisualizer(mediaStream);
         makePipDraggable();
 
-        if (chkBlur && chkBlur.checked) {
-          applyVideoTrackBlur(true);
+        if (blurSlider && parseInt(blurSlider.value, 10) > 0) {
+          updateBlur(blurSlider.value);
         }
 
         return mediaStream;
       } catch (err) {
         console.warn('Camera/Mic access not granted:', err);
-        chkRecord.checked = false;
-        alert('Could not access camera/microphone: ' + err.message);
         return null;
       }
     }
@@ -1004,11 +1002,6 @@
     }
 
     function updateCameraMode(mode) {
-      if (!mediaStream && chkRecord.checked) {
-        setupCamera();
-        return;
-      }
-
       if (mode === 'bg') {
         videoBg.style.display = 'block';
         videoPip.style.display = 'none';
@@ -1019,12 +1012,18 @@
         videoBg.style.display = 'none';
         videoPip.style.display = 'none';
       }
+
+      if (!mediaStream && chkRecord.checked) {
+        setupCamera().catch(() => {});
+      }
       saveSettings();
     }
 
     function toggleRecordCheckbox(checked) {
       if (checked) {
-        setupCamera();
+        setupCamera().then(() => {
+          updateCameraMode(cameraModeSelect.value || 'pip');
+        }).catch(() => {});
       } else {
         videoBg.style.display = 'none';
         videoPip.style.display = 'none';
@@ -1035,10 +1034,14 @@
     // Countdown & Prompter start
     async function startPrompterWithCountdown() {
       if (chkRecord.checked && !mediaStream) {
-        await setupCamera();
+        try {
+          await setupCamera();
+        } catch (e) {
+          console.warn('Camera setup error:', e);
+        }
       }
 
-      if (chkRecord.checked) {
+      if (chkRecord.checked && mediaStream) {
         countdownOverlay.style.display = 'flex';
         let count = 3;
         countdownText.textContent = count;
@@ -1355,7 +1358,8 @@
     window.addEventListener('DOMContentLoaded', async () => {
       initFormats();
       loadSettings();
-      
+      updateCameraMode(cameraModeSelect.value || 'pip');
+
       // Try loading script: 1) localStorage, 2) script.md next to index.html
       const hasStorage = loadScriptFromStorage();
       if (!hasStorage) {
@@ -1363,7 +1367,7 @@
       }
 
       if (chkRecord.checked) {
-        setupCamera();
+        setupCamera().catch(() => {});
       }
     });
   </script>
