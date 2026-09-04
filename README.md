@@ -26,7 +26,7 @@ This application is **100% free, open-source, and runs entirely inside your brow
 ## 🎯 Key Features
 
 - 👁️ **Eye-Line Contact Guide:** A dedicated guideline positioned right at the top 25% of your screen directly beneath the webcam lens, keeping your gaze natural and focused on your audience.
-- 🌫️ **Ghost Camera Mirror & Background Blur:** Displays your live webcam feed behind the scrolling prompter text (with a one-click soft focus / bokeh blur toggle <kbd>B</kbd>), allowing you to monitor your posture, lighting, and framing in real time.
+- 🪞 **Ghost Camera Mirror & Draggable PiP:** Displays your live webcam feed behind the scrolling prompter text or in a draggable PiP box, allowing you to monitor your posture, lighting, and framing in real time.
 - 📹 **Integrated HD Video Recording:** Records crisp 1080p video directly from your webcam with support for both universal **MP4 (H.264/AAC)** and high-quality **WebM (VP9/VP8/Opus)**.
 - 🎙️ **Microphone Audio Level (VU) Meter:** Real-time Web Audio API frequency analysis visualizer ensures your microphone is live and balanced before you start speaking.
 - ⏱️ **3-2-1 Action Countdown:** Smooth 3-second animated countdown overlay gives you time to smile, center yourself, and breathe before recording and scrolling begins.
@@ -36,7 +36,7 @@ This application is **100% free, open-source, and runs entirely inside your brow
   - **Font Sizing:** Adjustable from `20px` to `72px`.
   - **Column Width:** Adaptable from `250px` to `1000px` (optimizing for 2–4 words per line for minimal horizontal eye movement).
   - **Paragraph Gap:** Adjust spacing between thoughts from `0.00em` to `2.00em`.
-- ⌨️ **Comprehensive Keyboard Shortcuts:** Control playback, speed, font, blur, and review with simple single-key shortcuts.
+- ⌨️ **Comprehensive Keyboard Shortcuts:** Control playback, speed, font, and review with simple single-key shortcuts.
 - 📄 **Markdown & Text File Support:** Load any `.md` or `.txt` speech script from disk via the "📂 Open .md File" picker, or place a `script.md` file next to `index.html` for instant auto-loading. Headings, bold text, italics, and bullet lists are automatically formatted.
 - 💾 **Automatic Local Persistence:** Custom text edits and prompter preferences are automatically saved in browser `localStorage`.
 - 🔌 **100% Offline & Zero Dependencies:** Pure HTML5, CSS3, and Vanilla JavaScript in a single lightweight file. No `npm`, no bundlers, no external CDNs.
@@ -52,7 +52,6 @@ This application is **100% free, open-source, and runs entirely inside your brow
 | <kbd>R</kbd> | **Reset** prompter to top & reset timer |
 | <kbd>↑</kbd> / <kbd>↓</kbd> | **Speed Up / Slow Down** scrolling speed |
 | <kbd>[</kbd> / <kbd>]</kbd> | **Decrease / Increase** font size |
-| <kbd>B</kbd> | **Toggle Background Blur** on camera preview |
 | <kbd>F</kbd> | **Toggle Fullscreen** mode |
 
 ---

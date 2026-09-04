@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Teleprompter & Pitch Video Recorder — 100% Client-Side & Private</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📹</text></svg>">
-  <meta name="description" content="A lightweight, privacy-focused, zero-dependency browser teleprompter with integrated HD video recording, audio VU meter, eye-line guide, background blur, Markdown file loading, and instant local take download.">
+  <meta name="description" content="A lightweight, privacy-focused, zero-dependency browser teleprompter with integrated HD video recording, audio VU meter, eye-line guide, Markdown file loading, and instant local take download.">
   <style>
     :root {
       --bg-color: #0b0f19;
@@ -51,10 +51,6 @@
       transition: filter 0.3s ease, transform 0.3s ease;
     }
 
-    #camera-background.blurred {
-      filter: blur(14px) contrast(1.1) brightness(0.85);
-      transform: scaleX(-1) scale(1.08); /* prevents blur fringe artifacts */
-    }
 
     /* Picture-in-Picture Camera Box */
     #camera-pip {
@@ -588,11 +584,6 @@
       </select>
     </div>
 
-    <div class="control-group">
-      <span>Blur:</span>
-      <input type="range" id="blurSlider" min="0" max="30" step="1" value="0" oninput="updateBlur(this.value)" title="Adjust camera blur intensity in real-time (0 = Off)">
-      <span class="stat-badge" id="blurVal">Off</span>
-    </div>
 
     <div class="control-group">
       <span>Speed:</span>
@@ -681,8 +672,7 @@
 
     // Video Elements
     const chkRecord = document.getElementById('chkRecord');
-    const blurSlider = document.getElementById('blurSlider');
-    const blurVal = document.getElementById('blurVal');
+
     const formatSelect = document.getElementById('formatSelect');
     const cameraModeSelect = document.getElementById('cameraModeSelect');
     const videoBg = document.getElementById('camera-background');
@@ -806,7 +796,6 @@
           width: widthSlider.value,
           spacing: spacingSlider.value,
           cameraMode: cameraModeSelect.value,
-          blur: blurSlider.value,
           record: chkRecord.checked
         };
         localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
@@ -823,7 +812,6 @@
         if (s.width) { widthSlider.value = s.width; updateWidth(s.width); }
         if (s.spacing) { spacingSlider.value = s.spacing; updateSpacing(s.spacing); }
         if (s.cameraMode) { cameraModeSelect.value = s.cameraMode; updateCameraMode(s.cameraMode); }
-        if (s.blur !== undefined) { blurSlider.value = s.blur; updateBlur(s.blur); }
         if (s.record !== undefined) { chkRecord.checked = s.record; }
       } catch (e) {}
     }
@@ -877,10 +865,6 @@
         frameRate: { ideal: 30 }
       };
 
-      if (blurSlider && parseInt(blurSlider.value, 10) > 0) {
-        videoConstraints.backgroundBlur = true;
-      }
-
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
           video: videoConstraints,
@@ -897,10 +881,6 @@
         updateCameraMode(cameraModeSelect.value || 'pip');
         setupAudioVisualizer(mediaStream);
         makePipDraggable();
-
-        if (blurSlider && parseInt(blurSlider.value, 10) > 0) {
-          updateBlur(blurSlider.value);
-        }
 
         return mediaStream;
       } catch (err) {
@@ -935,40 +915,6 @@
       document.addEventListener('mouseup', () => {
         isDragging = false;
       });
-    }
-
-    async function applyVideoTrackBlur(enable) {
-      if (!mediaStream) return;
-      const track = mediaStream.getVideoTracks()[0];
-      if (track) {
-        const caps = track.getCapabilities ? track.getCapabilities() : {};
-        if ('backgroundBlur' in caps) {
-          try {
-            await track.applyConstraints({ advanced: [{ backgroundBlur: enable }] });
-          } catch (e) {}
-        }
-      }
-    }
-
-    function updateBlur(val) {
-      const radius = parseInt(val, 10);
-      const blurValElem = document.getElementById('blurVal');
-      if (blurValElem) {
-        blurValElem.textContent = radius === 0 ? 'Off' : radius + 'px';
-      }
-
-      if (radius === 0) {
-        videoBg.style.filter = 'contrast(1.05) brightness(0.9)';
-        videoBg.style.transform = 'scaleX(-1)';
-        videoPip.style.filter = 'none';
-      } else {
-        videoBg.style.filter = `blur(${radius}px) contrast(1.1) brightness(0.85)`;
-        videoBg.style.transform = 'scaleX(-1) scale(1.08)';
-        videoPip.style.filter = `blur(${Math.min(radius, 6)}px)`;
-      }
-
-      applyVideoTrackBlur(radius > 0);
-      saveSettings();
     }
 
     function setupAudioVisualizer(stream) {
@@ -1331,10 +1277,7 @@
         updateSpeed(speedSlider.value);
       } else if (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') {
         resetScroll();
-      } else if (e.key === 'b' || e.key === 'B' || e.key === 'и' || e.key === 'И') {
-        const nextBlur = parseInt(blurSlider.value, 10) === 0 ? 12 : 0;
-        blurSlider.value = nextBlur;
-        updateBlur(nextBlur);
+
       } else if (e.key === 'f' || e.key === 'F' || e.key === 'а' || e.key === 'А') {
         toggleFullscreen();
       } else if (e.key === ']') {
