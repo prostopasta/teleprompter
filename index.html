@@ -526,10 +526,15 @@
       <button class="btn-top" onclick="loadScriptFromMdFile()" title="Reload script.md from current directory">↺ Reload script.md</button>
       <button onclick="clearScript()" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:12px; text-decoration:underline; margin-left:4px;">Clear</button>
       <span style="color:#4b5563;">|</span>
+      <span style="font-size:11px; color:#9ca3af; display:flex; align-items:center; gap:5px;" title="Live Microphone Input Level Test">
+        <span>🎙️</span>
+        <div class="mic-meter-bar" style="width:40px; height:6px; background:rgba(255,255,255,0.15); border-radius:3px; overflow:hidden;"><div class="mic-meter-fill" id="micMeterLive" style="height:100%; width:0%; background:var(--accent-color); transition:width 0.05s linear;"></div></div>
+      </span>
+      <span style="color:#4b5563;">|</span>
       <a href="https://github.com/prostopasta/teleprompter" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="shortcuts-hint">
-      <kbd>Space</kbd> Play/Pause · <kbd>Esc</kbd> / <kbd>S</kbd> Stop & Preview · <kbd>R</kbd> Reset · <kbd>↑</kbd><kbd>↓</kbd> Speed · <kbd>[</kbd><kbd>]</kbd> Font · <kbd>B</kbd> Blur BG · <kbd>F</kbd> Fullscreen
+      <kbd>Space</kbd> Play/Pause · <kbd>Esc</kbd> / <kbd>S</kbd> Stop & Preview · <kbd>R</kbd> Reset · <kbd>↑</kbd><kbd>↓</kbd> Speed · <kbd>[</kbd><kbd>]</kbd> Font · <kbd>F</kbd> Fullscreen
     </div>
   </div>
 
@@ -583,10 +588,11 @@
       </select>
     </div>
 
-    <label class="toggle-label" title="Enable video background blur on camera feed (when supported by browser/OS)">
-      <input type="checkbox" id="chkBlur" onchange="toggleBackgroundBlur(this.checked)">
-      <span>🌫️ Video Blur</span>
-    </label>
+    <div class="control-group">
+      <span>Blur:</span>
+      <input type="range" id="blurSlider" min="0" max="30" step="1" value="0" oninput="updateBlur(this.value)" title="Adjust camera blur intensity in real-time (0 = Off)">
+      <span class="stat-badge" id="blurVal">Off</span>
+    </div>
 
     <div class="control-group">
       <span>Speed:</span>
@@ -675,7 +681,8 @@
 
     // Video Elements
     const chkRecord = document.getElementById('chkRecord');
-    const chkBlur = document.getElementById('chkBlur');
+    const blurSlider = document.getElementById('blurSlider');
+    const blurVal = document.getElementById('blurVal');
     const formatSelect = document.getElementById('formatSelect');
     const cameraModeSelect = document.getElementById('cameraModeSelect');
     const videoBg = document.getElementById('camera-background');
@@ -799,7 +806,7 @@
           width: widthSlider.value,
           spacing: spacingSlider.value,
           cameraMode: cameraModeSelect.value,
-          blur: chkBlur.checked,
+          blur: blurSlider.value,
           record: chkRecord.checked
         };
         localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
@@ -816,7 +823,7 @@
         if (s.width) { widthSlider.value = s.width; updateWidth(s.width); }
         if (s.spacing) { spacingSlider.value = s.spacing; updateSpacing(s.spacing); }
         if (s.cameraMode) { cameraModeSelect.value = s.cameraMode; updateCameraMode(s.cameraMode); }
-        if (s.blur !== undefined) { chkBlur.checked = s.blur; toggleBackgroundBlur(s.blur); }
+        if (s.blur !== undefined) { blurSlider.value = s.blur; updateBlur(s.blur); }
         if (s.record !== undefined) { chkRecord.checked = s.record; }
       } catch (e) {}
     }
@@ -945,8 +952,24 @@
       }
     }
 
-    async function toggleBackgroundBlur(enable) {
-      await applyVideoTrackBlur(enable);
+    function updateBlur(val) {
+      const radius = parseInt(val, 10);
+      const blurValElem = document.getElementById('blurVal');
+      if (blurValElem) {
+        blurValElem.textContent = radius === 0 ? 'Off' : radius + 'px';
+      }
+
+      if (radius === 0) {
+        videoBg.style.filter = 'contrast(1.05) brightness(0.9)';
+        videoBg.style.transform = 'scaleX(-1)';
+        videoPip.style.filter = 'none';
+      } else {
+        videoBg.style.filter = `blur(${radius}px) contrast(1.1) brightness(0.85)`;
+        videoBg.style.transform = 'scaleX(-1) scale(1.08)';
+        videoPip.style.filter = `blur(${Math.min(radius, 6)}px)`;
+      }
+
+      applyVideoTrackBlur(radius > 0);
       saveSettings();
     }
 
@@ -965,13 +988,15 @@
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
         function drawMeter() {
-          if (!isRecordingActive) return;
+          if (!mediaStream) return;
           analyser.getByteFrequencyData(dataArray);
           let sum = 0;
           for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
           const avg = sum / dataArray.length;
           const pct = Math.min(100, Math.round((avg / 128) * 100));
-          micMeter.style.width = pct + '%';
+          if (micMeter) micMeter.style.width = pct + '%';
+          const micLive = document.getElementById('micMeterLive');
+          if (micLive) micLive.style.width = pct + '%';
           animMicId = requestAnimationFrame(drawMeter);
         }
         drawMeter();
@@ -1304,8 +1329,9 @@
       } else if (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') {
         resetScroll();
       } else if (e.key === 'b' || e.key === 'B' || e.key === 'и' || e.key === 'И') {
-        chkBlur.checked = !chkBlur.checked;
-        toggleBackgroundBlur(chkBlur.checked);
+        const nextBlur = parseInt(blurSlider.value, 10) === 0 ? 12 : 0;
+        blurSlider.value = nextBlur;
+        updateBlur(nextBlur);
       } else if (e.key === 'f' || e.key === 'F' || e.key === 'а' || e.key === 'А') {
         toggleFullscreen();
       } else if (e.key === ']') {
