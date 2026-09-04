@@ -37,6 +37,7 @@ This application is **100% free, open-source, and runs entirely inside your brow
   - **Column Width:** Adaptable from `250px` to `1000px` (optimizing for 2–4 words per line for minimal horizontal eye movement).
   - **Paragraph Gap:** Adjust spacing between thoughts from `0.00em` to `2.00em`.
 - ⌨️ **Comprehensive Keyboard Shortcuts:** Control playback, speed, font, blur, and review with simple single-key shortcuts.
+- 📄 **Markdown & Text File Support:** Load any `.md` or `.txt` speech script from disk via the "📂 Open .md File" picker, or place a `script.md` file next to `index.html` for instant auto-loading. Headings, bold text, italics, and bullet lists are automatically formatted.
 - 💾 **Automatic Local Persistence:** Custom text edits and prompter preferences are automatically saved in browser `localStorage`.
 - 🔌 **100% Offline & Zero Dependencies:** Pure HTML5, CSS3, and Vanilla JavaScript in a single lightweight file. No `npm`, no bundlers, no external CDNs.
 

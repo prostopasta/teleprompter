@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Teleprompter & Pitch Video Recorder — 100% Client-Side & Private</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📹</text></svg>">
-  <meta name="description" content="A lightweight, privacy-focused, zero-dependency browser teleprompter with integrated HD video recording, audio VU meter, eye-line guide, background blur, and instant local take download.">
+  <meta name="description" content="A lightweight, privacy-focused, zero-dependency browser teleprompter with integrated HD video recording, audio VU meter, eye-line guide, background blur, Markdown file loading, and instant local take download.">
   <style>
     :root {
       --bg-color: #0b0f19;
@@ -221,6 +221,19 @@
       color: var(--accent-color);
     }
 
+    #prompter-text em {
+      color: #93c5fd;
+      font-style: italic;
+    }
+
+    #prompter-text code {
+      font-family: monospace;
+      background: rgba(255,255,255,0.15);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.85em;
+    }
+
     /* Controls Bar */
     .controls-panel {
       position: fixed;
@@ -359,7 +372,7 @@
       transition: width 0.1s linear;
     }
 
-    /* Shortcuts Hint & Header Info */
+    /* Top Bar with Branding & Shortcuts */
     .top-bar-container {
       position: fixed;
       top: 15px;
@@ -377,13 +390,13 @@
       font-size: 13px;
       font-weight: 700;
       color: #9ca3af;
-      background: rgba(11, 15, 25, 0.85);
+      background: rgba(11, 15, 25, 0.88);
       padding: 6px 14px;
       border-radius: 20px;
-      border: 1px solid rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
 
     .app-brand a {
@@ -395,14 +408,30 @@
       text-decoration: underline;
     }
 
+    .btn-top {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      color: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 12px;
+      transition: all 0.2s;
+    }
+
+    .btn-top:hover {
+      background: rgba(255,255,255,0.25);
+    }
+
     .shortcuts-hint {
       pointer-events: auto;
       font-size: 12px;
       color: #9ca3af;
-      background: rgba(11, 15, 25, 0.85);
+      background: rgba(11, 15, 25, 0.88);
       padding: 6px 12px;
       border-radius: 20px;
-      border: 1px solid rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
     }
 
     .shortcuts-hint kbd {
@@ -467,6 +496,9 @@
 </head>
 <body>
 
+  <!-- Hidden File Input for .md / .txt upload -->
+  <input type="file" id="fileInput" accept=".md,.txt,.markdown" style="display:none" onchange="handleFileSelect(event)">
+
   <!-- Video Camera Feeds -->
   <video id="camera-background" autoplay playsinline muted></video>
   <video id="camera-pip" autoplay playsinline muted></video>
@@ -484,10 +516,11 @@
     <div class="app-brand">
       <span>📹 Teleprompter</span>
       <span style="color:#4b5563;">|</span>
-      <a href="https://github.com/prostopasta/teleprompter" target="_blank" rel="noopener">GitHub</a>
+      <button class="btn-top" onclick="document.getElementById('fileInput').click()" title="Load speech text from any .md or .txt file">📂 Open .md File</button>
+      <button class="btn-top" onclick="loadScriptFromMdFile()" title="Reload script.md from current directory">↺ Reload script.md</button>
+      <button onclick="clearScript()" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:12px; text-decoration:underline; margin-left:4px;">Clear</button>
       <span style="color:#4b5563;">|</span>
-      <button onclick="loadSampleScript()" style="background:none; border:none; color:#9ca3af; cursor:pointer; font-size:12px; text-decoration:underline;">Sample Script</button>
-      <button onclick="clearScript()" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:12px; text-decoration:underline;">Clear</button>
+      <a href="https://github.com/prostopasta/teleprompter" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="shortcuts-hint">
       <kbd>Space</kbd> Play/Pause · <kbd>Esc</kbd> / <kbd>S</kbd> Stop & Preview · <kbd>R</kbd> Reset · <kbd>↑</kbd><kbd>↓</kbd> Speed · <kbd>[</kbd><kbd>]</kbd> Font · <kbd>B</kbd> Blur BG · <kbd>F</kbd> Fullscreen
@@ -507,15 +540,10 @@
     <div class="countdown-number" id="countdownText">3</div>
   </div>
 
-  <!-- Prompter Content Container -->
+  <!-- Prompter Content Container (Clean & Dynamic) -->
   <div id="prompter-container">
     <div id="prompter-text" contenteditable="true" spellcheck="false" title="Click to edit speech text directly">
-<p>Welcome everyone, and thank you for tuning in!</p>
-<p>Today, I am excited to introduce our project, built to deliver <strong>exceptional performance, clean architecture, and reliable scalability</strong>.</p>
-<p>Over the past several years, our focus has been on solving real-world problems through automation, high availability, and zero-compromise security.</p>
-<p>We believe that <strong>great technology should empower creators</strong> to move quickly, stay agile, and ship with absolute confidence.</p>
-<p>Whether you are recording an async video pitch, delivering a presentation, or sharing a product demo — this tool is designed to keep your delivery effortless and natural.</p>
-<p>Thank you for your time and attention, and we look forward to hearing your thoughts!</p>
+      <p>Click <strong>📂 Open .md File</strong> above or paste your speech text here...</p>
     </div>
   </div>
 
@@ -658,6 +686,88 @@
     const STORAGE_KEY_TEXT = 'teleprompter_custom_text';
     const STORAGE_KEY_SETTINGS = 'teleprompter_settings';
 
+    // Zero-dependency Markdown-to-HTML Parser
+    function markdownToHtml(md) {
+      if (!md) return '';
+      const text = md.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      const blocks = text.split(/\n\s*\n+/);
+      const htmlBlocks = [];
+
+      for (let block of blocks) {
+        block = block.trim();
+        if (!block) continue;
+
+        // Heading support (#, ##, ###)
+        if (/^#{1,6}\s+/.test(block)) {
+          const headingText = block.replace(/^#{1,6}\s+/, '');
+          htmlBlocks.push(`<p><strong>${inlineFormat(headingText)}</strong></p>`);
+          continue;
+        }
+
+        // Bullet lists
+        if (/^[-*]\s+/m.test(block)) {
+          const items = block.split(/\n/).map(l => l.replace(/^[-*]\s+/, '').trim()).filter(l => l.length > 0);
+          for (const item of items) {
+            htmlBlocks.push(`<p>• ${inlineFormat(item)}</p>`);
+          }
+          continue;
+        }
+
+        // Standard paragraph
+        const lines = block.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        const combined = lines.join(' ');
+        htmlBlocks.push(`<p>${inlineFormat(combined)}</p>`);
+      }
+
+      return htmlBlocks.join('\n');
+    }
+
+    function inlineFormat(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/__(.*?)__/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/_(.*?)_/g, '<em>$1</em>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>');
+    }
+
+    // Markdown file loading (Fetch script.md or speech.md)
+    async function loadScriptFromMdFile() {
+      const candidates = ['script.md', 'speech.md', 'transcript.md'];
+      for (const filename of candidates) {
+        try {
+          const res = await fetch(filename, { cache: 'no-cache' });
+          if (res.ok) {
+            const md = await res.text();
+            if (md && md.trim().length > 0) {
+              prompterText.innerHTML = markdownToHtml(md);
+              saveScriptToStorage();
+              return true;
+            }
+          }
+        } catch (e) {}
+      }
+      return false;
+    }
+
+    // File input handler for local .md / .txt files
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target.result;
+        prompterText.innerHTML = markdownToHtml(content);
+        saveScriptToStorage();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
     function saveScriptToStorage() {
       try {
         localStorage.setItem(STORAGE_KEY_TEXT, prompterText.innerHTML);
@@ -669,8 +779,10 @@
         const saved = localStorage.getItem(STORAGE_KEY_TEXT);
         if (saved && saved.trim().length > 0) {
           prompterText.innerHTML = saved;
+          return true;
         }
       } catch (e) {}
+      return false;
     }
 
     function saveSettings() {
@@ -705,18 +817,8 @@
 
     prompterText.addEventListener('input', saveScriptToStorage);
 
-    function loadSampleScript() {
-      prompterText.innerHTML = `<p>Welcome everyone, and thank you for tuning in!</p>
-<p>Today, I am excited to introduce our project, built to deliver <strong>exceptional performance, clean architecture, and reliable scalability</strong>.</p>
-<p>Over the past several years, our focus has been on solving real-world problems through automation, high availability, and zero-compromise security.</p>
-<p>We believe that <strong>great technology should empower creators</strong> to move quickly, stay agile, and ship with absolute confidence.</p>
-<p>Whether you are recording an async video pitch, delivering a presentation, or sharing a product demo — this tool is designed to keep your delivery effortless and natural.</p>
-<p>Thank you for your time and attention, and we look forward to hearing your thoughts!</p>`;
-      saveScriptToStorage();
-    }
-
     function clearScript() {
-      if (confirm('Clear the current script? You can type or paste your new speech.')) {
+      if (confirm('Clear the current prompter script?')) {
         prompterText.innerHTML = '<p>Type or paste your presentation speech here...</p>';
         saveScriptToStorage();
       }
@@ -1169,10 +1271,16 @@
     });
 
     // Initialize on load
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       initFormats();
-      loadScriptFromStorage();
       loadSettings();
+      
+      // Try loading script: 1) localStorage, 2) script.md next to index.html
+      const hasStorage = loadScriptFromStorage();
+      if (!hasStorage) {
+        await loadScriptFromMdFile();
+      }
+
       if (chkRecord.checked) {
         setupCamera();
       }
