@@ -59,18 +59,24 @@
     /* Picture-in-Picture Camera Box */
     #camera-pip {
       position: fixed;
-      top: 20px;
-      left: 20px;
+      top: 65px;
+      left: 24px;
       width: 220px;
       height: 130px;
       border-radius: 12px;
-      border: 2px solid rgba(0, 210, 170, 0.6);
+      border: 2px solid rgba(0, 210, 170, 0.7);
       background: #000;
       object-fit: cover;
       z-index: 150;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.7);
-      display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+      display: block; /* Default PiP view */
       transform: scaleX(-1);
+      cursor: grab;
+      user-select: none;
+    }
+
+    #camera-pip:active {
+      cursor: grabbing;
     }
 
     /* Top Focus Guide for Camera Eye Contact */
@@ -571,15 +577,15 @@
     <div class="control-group">
       <span>Preview:</span>
       <select id="cameraModeSelect" onchange="updateCameraMode(this.value)">
-        <option value="bg" selected>Background</option>
-        <option value="pip">PiP Box</option>
+        <option value="pip" selected>PiP Box</option>
+        <option value="bg">Background</option>
         <option value="none">Hidden</option>
       </select>
     </div>
 
-    <label class="toggle-label" title="Apply soft blur effect to background camera preview (B)">
+    <label class="toggle-label" title="Enable video background blur on camera feed (when supported by browser/OS)">
       <input type="checkbox" id="chkBlur" onchange="toggleBackgroundBlur(this.checked)">
-      <span>🌫️ Blur BG</span>
+      <span>🌫️ Video Blur</span>
     </label>
 
     <div class="control-group">
@@ -858,13 +864,19 @@
     async function setupCamera() {
       if (mediaStream) return mediaStream;
 
+      const videoConstraints = {
+        width: { ideal: 1920, min: 1280 },
+        height: { ideal: 1080, min: 720 },
+        frameRate: { ideal: 30 }
+      };
+
+      if (chkBlur && chkBlur.checked) {
+        videoConstraints.backgroundBlur = true;
+      }
+
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 1920, min: 1280 },
-            height: { ideal: 1080, min: 720 },
-            frameRate: { ideal: 30 }
-          },
+          video: videoConstraints,
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
@@ -875,8 +887,14 @@
 
         videoBg.srcObject = mediaStream;
         videoPip.srcObject = mediaStream;
-        updateCameraMode(cameraModeSelect.value);
+        updateCameraMode(cameraModeSelect.value || 'pip');
         setupAudioVisualizer(mediaStream);
+        makePipDraggable();
+
+        if (chkBlur && chkBlur.checked) {
+          applyVideoTrackBlur(true);
+        }
+
         return mediaStream;
       } catch (err) {
         console.warn('Camera/Mic access not granted:', err);
@@ -886,59 +904,49 @@
       }
     }
 
-    function setupAudioVisualizer(stream) {
-      try {
-        if (!audioContext) {
-          audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioContext.state === 'suspended') {
-          audioContext.resume();
-        }
-        analyser = audioContext.createAnalyser();
-        const source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
-        analyser.fftSize = 64;
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    function makePipDraggable() {
+      let isDragging = false;
+      let startX, startY;
 
-        function drawMeter() {
-          if (!isRecordingActive) return;
-          analyser.getByteFrequencyData(dataArray);
-          let sum = 0;
-          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-          const avg = sum / dataArray.length;
-          const pct = Math.min(100, Math.round((avg / 128) * 100));
-          micMeter.style.width = pct + '%';
-          animMicId = requestAnimationFrame(drawMeter);
-        }
-        drawMeter();
-      } catch (e) {}
+      videoPip.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.clientX - videoPip.offsetLeft;
+        startY = e.clientY - videoPip.offsetTop;
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const maxX = window.innerWidth - videoPip.offsetWidth - 10;
+        const maxY = window.innerHeight - videoPip.offsetHeight - 10;
+        const newX = Math.max(10, Math.min(maxX, e.clientX - startX));
+        const newY = Math.max(10, Math.min(maxY, e.clientY - startY));
+        videoPip.style.left = newX + 'px';
+        videoPip.style.top = newY + 'px';
+        videoPip.style.right = 'auto';
+        videoPip.style.bottom = 'auto';
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
     }
 
-    function updateCameraMode(mode) {
-      if (!mediaStream && chkRecord.checked) {
-        setupCamera();
-        return;
+    async function applyVideoTrackBlur(enable) {
+      if (!mediaStream) return;
+      const track = mediaStream.getVideoTracks()[0];
+      if (track) {
+        const caps = track.getCapabilities ? track.getCapabilities() : {};
+        if ('backgroundBlur' in caps) {
+          try {
+            await track.applyConstraints({ advanced: [{ backgroundBlur: enable }] });
+          } catch (e) {}
+        }
       }
-
-      if (mode === 'bg') {
-        videoBg.style.display = 'block';
-        videoPip.style.display = 'none';
-      } else if (mode === 'pip') {
-        videoBg.style.display = 'none';
-        videoPip.style.display = 'block';
-      } else {
-        videoBg.style.display = 'none';
-        videoPip.style.display = 'none';
-      }
-      saveSettings();
     }
 
-    function toggleBackgroundBlur(enable) {
-      if (enable) {
-        videoBg.classList.add('blurred');
-      } else {
-        videoBg.classList.remove('blurred');
-      }
+    async function toggleBackgroundBlur(enable) {
+      await applyVideoTrackBlur(enable);
       saveSettings();
     }
 
