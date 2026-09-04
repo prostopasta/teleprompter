@@ -950,6 +950,53 @@
       saveSettings();
     }
 
+    function setupAudioVisualizer(stream) {
+      try {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+        analyser = audioContext.createAnalyser();
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        analyser.fftSize = 64;
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        function drawMeter() {
+          if (!isRecordingActive) return;
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+          const avg = sum / dataArray.length;
+          const pct = Math.min(100, Math.round((avg / 128) * 100));
+          micMeter.style.width = pct + '%';
+          animMicId = requestAnimationFrame(drawMeter);
+        }
+        drawMeter();
+      } catch (e) {}
+    }
+
+    function updateCameraMode(mode) {
+      if (!mediaStream && chkRecord.checked) {
+        setupCamera();
+        return;
+      }
+
+      if (mode === 'bg') {
+        videoBg.style.display = 'block';
+        videoPip.style.display = 'none';
+      } else if (mode === 'pip') {
+        videoBg.style.display = 'none';
+        videoPip.style.display = 'block';
+      } else {
+        videoBg.style.display = 'none';
+        videoPip.style.display = 'none';
+      }
+      saveSettings();
+    }
+
     function toggleRecordCheckbox(checked) {
       if (checked) {
         setupCamera();
